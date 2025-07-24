@@ -1,0 +1,49 @@
+# Build artifacts
+bin/
+obj/
+out/
+
+# IDE files
+.vs/
+.vscode/
+*.user
+*.suo
+*.cache
+*.docstates
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Docker files
+Dockerfile*
+docker-compose*
+
+# Documentation
+README.md
+*.md
+
+# Logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Test results
+TestResults/
+test-results/
+
+# Package files
+*.nupkg
+*.snupkg
+
+# Backup files
+*.bak
+*.backup

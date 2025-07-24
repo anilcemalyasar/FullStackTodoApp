@@ -1,0 +1,148 @@
+version: '3.8'
+
+services:
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: todo-postgres
+    environment:
+      POSTGRES_DB: TodoAppDB
+      POSTGRES_USER: todouser
+      POSTGRES_PASSWORD: todopassword123
+      POSTGRES_PORT: 5432
+    # set shared memory limit when using docker compose
+    shm_size: 128mb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - elastic
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U todouser -d TodoAppDB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./TodoAppELK
+      dockerfile: Dockerfile
+    container_name: todoapp-backend
+    ports:
+      - "5159:5159"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Docker
+      - ASPNETCORE_URLS=http://+:5159
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=TodoAppDB;User Id=todouser;Password=todopassword123;Port=5432;Pooling=true;Connection Lifetime=0;
+      - ElasticConfiguration__Uri=http://elasticsearch:9200
+      - Elasticsearch__Uri=http://elasticsearch:9200
+      - ElasticApm__ServerUrl=http://apm-server:8200
+      - ElasticApm__ServiceName=TodoAppElkAPI
+      - ElasticApm__Environment=docker
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - elastic
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./TodoAppReact/todolist
+      dockerfile: Dockerfile
+    container_name: todoapp-frontend
+    environment:
+      - REACT_APP_ENV=docker
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - elastic
+    restart: unless-stopped
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.1
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false # Sadece geliştirme ortamı için!
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    networks:
+      - elastic
+    # healthcheck:
+    #   test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.10.1
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    volumes:
+      - kibana_data:/usr/share/kibana/data
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    networks:
+      - elastic
+    # healthcheck:
+    #   test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+
+  apm_server:
+    image: docker.elastic.co/apm/apm-server:7.10.1
+    container_name: apm-server
+    ports:
+      - "8200:8200"
+    depends_on:
+      - elasticsearch
+      - kibana
+    environment:
+      - output.elasticsearch.hosts=["http://elasticsearch:9200"]
+      - apm-server.kibana.enabled=true
+      - apm-server.kibana.host=kibana:5601
+    networks:   
+      - elastic 
+
+  metricbeat:
+    image: docker.elastic.co/beats/metricbeat:7.10.1
+    container_name: metricbeat
+    user: root
+    depends_on:
+      - elasticsearch
+      - kibana
+      # elasticsearch:
+      #   condition: service_healthy
+      # kibana:
+      #   condition: service_healthy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./metricbeat.yml:/usr/share/metricbeat/metricbeat.yml
+    command: metricbeat -e -system.hostfs=/hostfs
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - KIBANA_HOST=http://kibana:5601
+    networks:
+      - elastic
+
+
+networks:
+      elastic:
+        driver: bridge
+
+volumes:
+  esdata:
+  kibana_data:
+  postgres-data:
+
+    
