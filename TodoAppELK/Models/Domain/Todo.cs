@@ -22,5 +22,9 @@ namespace TodoAppELK.Models.Domain
 
         [Required] // not null 
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
+
+        [Required] // not null
+        public int UserId { get; set; }
+        public User user { get; set; } = null!; // Navigation property to User
     }
 }

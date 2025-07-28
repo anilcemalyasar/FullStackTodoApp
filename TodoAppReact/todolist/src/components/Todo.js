@@ -1,7 +1,6 @@
 import React from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPenToSquare } from '@fortawesome/free-solid-svg-icons'
-import { faTrash } from '@fortawesome/free-solid-svg-icons'
+import { faPenToSquare, faCheckSquare, faSquare, faTrash } from '@fortawesome/free-solid-svg-icons'
 
 export const Todo = ({task, deleteTodo, editTodo, toggleComplete, onTodoClick}) => {
     return (
@@ -9,11 +8,29 @@ export const Todo = ({task, deleteTodo, editTodo, toggleComplete, onTodoClick}) 
         <span onClick={onTodoClick} style={{ cursor: "pointer" }}>
             {task.task}
         </span>
-        <button onClick={() => toggleComplete(task.id)}>
-            {task.completed ? "✅" : "⬜"}
-        </button>
-        <button onClick={() => editTodo(task.id)}>Edit</button>
-        <button onClick={() => deleteTodo(task.id)}>Delete</button>
+        <div className="todo-icons">
+            <span
+                className="icon-btn"
+                title="Complete"
+                onClick={() => toggleComplete(task.id)}
+            >
+                <FontAwesomeIcon icon={task.completed ? faSquare : faCheckSquare} />
+            </span>
+            <span
+                className="icon-btn"
+                title="Edit"
+                onClick={() => editTodo(task.id)}
+            >
+                <FontAwesomeIcon icon={faPenToSquare} />
+            </span>
+            <span
+                className="icon-btn"
+                title="Delete"
+                onClick={() => deleteTodo(task.id)}
+            >
+                <FontAwesomeIcon icon={faTrash} />
+            </span>
+        </div>
     </div>
     )
 }

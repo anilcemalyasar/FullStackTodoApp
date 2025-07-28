@@ -16,15 +16,7 @@ const TodoWrapper = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // useEffect(() => {
-    //     fetch('http:/localhost:7159/api/todos')
-    //     .then(response => response.json())
-    //     .then(data => setTodos(data))
-    //     .catch(error => console.error('Error fetching todos:', error));
-    // }, []);
-    
-    console.log('API_BASE_URL:', API_BASE_URL);
-
+    const token = localStorage.getItem('token');
     useEffect(() => {
         fetchTodos();
     }, []); // Dependency array should be empty to run only once on mount
@@ -32,7 +24,11 @@ const TodoWrapper = () => {
     const fetchTodos = async () => {
         setLoading(true);
         try {
-            const response = await axios.get(`${API_BASE_URL}/todos`);
+            const response = await axios.get(`${API_BASE_URL}/todos`, {
+                headers: {
+                    Authorization: `Bearer ${token}` // Include the token in the request headers
+                }
+            });
             
             // map .net todos to react todos
             const mappedTodos = response.data.map(todo => ({
@@ -60,7 +56,11 @@ const TodoWrapper = () => {
                 isCompleted: false
             }
             
-            const response = await axios.post(`${API_BASE_URL}/todos`, newTodo);
+            const response = await axios.post(`${API_BASE_URL}/todos`, newTodo, {
+                headers: {
+                    Authorization: `Bearer ${token}` // Include the token in the request headers
+                }
+            });
 
             // post api hata dönmediyse yeni todoyu listeye ekleyelim
             const insertedTodo = response.data;
@@ -105,11 +105,15 @@ const TodoWrapper = () => {
             isCompleted: !todo.completed
         };
 
-        const response = await axios.put(`${API_BASE_URL}/todos/${id}`, updatedTodo);
+        const response = await axios.put(`${API_BASE_URL}/todos/${id}`, updatedTodo, {
+            headers: {
+                Authorization: `Bearer ${token}` // Include the token in the request headers
+            }
+        });
 
         setTodos(
             todos.map(todo => todo.id === id ?
-                { ...todo, completed: response.data.isCompleted } 
+                { ...todo, completed: response.data.isCompleted } // Update completed status from response
                 : todo
             )
         );
@@ -124,7 +128,11 @@ const TodoWrapper = () => {
     // }
     const deleteTodo = async (id) => {
         try {
-            await axios.delete(`${API_BASE_URL}/todos/${id}`)
+            await axios.delete(`${API_BASE_URL}/todos/${id}`, {
+                headers: {
+                    Authorization: `Bearer ${token}` // Include the token in the request headers
+                }
+            })
             setTodos(todos.filter(todo => todo.id !== id))
         } catch (error) {
             console.error('Error deleting todo:', error);
@@ -145,7 +153,11 @@ const TodoWrapper = () => {
                 isCompleted: todo.completed
             };
 
-            const response = await axios.put(`${API_BASE_URL}/todos/${id}`, updatedTodo);
+            const response = await axios.put(`${API_BASE_URL}/todos/${id}`, updatedTodo, {
+                headers: {
+                    Authorization: `Bearer ${token}` // Include the token in the request headers
+                }
+            });
             
             setTodos(todos.map(todo => todo.id === id ? 
                 { ...todo, isEditing: false, 

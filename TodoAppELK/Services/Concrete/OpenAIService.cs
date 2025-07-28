@@ -2,7 +2,9 @@
 using OpenAI.Chat;
 using System.ClientModel;
 using TodoAppELK.Models.Domain;
+using TodoAppELK.Models.DTOs;
 using TodoAppELK.Services.Abstract;
+using Serilog;
 
 namespace TodoAppELK.Services.Concrete
 {
@@ -38,8 +40,6 @@ namespace TodoAppELK.Services.Concrete
                     Endpoint = new Uri(baseUrl)
                 }
             );
-
-            
         }
 
         public async Task<string> AnalyzeTodoListAsync(List<Todo> todos)
@@ -54,12 +54,12 @@ namespace TodoAppELK.Services.Concrete
                     new UserChatMessage($"Analyze this todo list:\n{todoList}")
                 );
 
-                _logger.LogInformation("Todo list analysis completed for {TodoCount} items", todos.Count);
+                Log.Information("Todo list analysis completed for {TodoCount} items", todos.Count);
                 return response.Value.Content[0].Text;
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Error analyzing todo list");
+                Log.Error(e, "Error analyzing todo list");
                 return "Unable to analyze todo list at this time.";
             }
         }
@@ -75,32 +75,45 @@ namespace TodoAppELK.Services.Concrete
                     new UserChatMessage($"Generate a motivational message for someone who completed {completedCount} out of {totalCount} tasks ({completionRate:F1}% completion rate)")
                 );
 
-                _logger.LogInformation("Motivational message generated for completion rate: {CompletionRate}%", completionRate);
+                Log.Information("Motivational message generated for completion rate: {CompletionRate}%", completionRate);
                 return response.Value.Content[0].Text;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error generating motivational message");
+                Log.Error(ex, "Error generating motivational message");
                 return "Keep up the great work!";
             }
         }
 
-        public async Task<string> GenerateTodoSuggestAsync(string userInput)
+        public async Task<AiTodoSuggestionDto> GenerateSingleTodoSuggestionAsync(List<Todo> todos)
         {
             try
             {
+                var todoList = string.Join("\n", todos.Select(t => $"- {t.Title}: {t.Description} ({(t.IsCompleted ? "Completed" : "Pending")})"));
+                var prompt = $"Based on the following todo list, suggest one new practical todo item (return only the title and description, separated by a colon):\n{todoList}";
+
                 var response = await _openAIClient.CompleteChatAsync(
-                    new SystemChatMessage("You are a helpful assistant that generates practical todo items based on user input. Keep responses concise and actionable."),
-                    new UserChatMessage($"Generate 3-5 practical todo items based on this input: {userInput}")
+                    new SystemChatMessage("You are a helpful assistant that generates a single practical todo item based on the user's todo list. Respond with only the title and description, separated by a colon."),
+                    new UserChatMessage(prompt)
                 );
 
-                _logger.LogInformation("AI suggestion generated for input: {UserInput}", userInput);
-                return response.Value.Content[0].Text;
+                var suggestion = response.Value.Content[0].Text.Trim();
+                // Basit ayrıştırma: "Title: Description"
+                var parts = suggestion.Split(':', 2);
+                return new AiTodoSuggestionDto
+                {
+                    Title = parts.Length > 0 ? parts[0].Trim() : "AI Suggestion",
+                    Description = parts.Length > 1 ? parts[1].Trim() : ""
+                };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error generating todo suggestion");
-                return "Unable to generate suggestions at this time.";
+                Log.Error(ex, "Error generating single todo suggestion");
+                return new AiTodoSuggestionDto
+                {
+                    Title = "AI Suggestion",
+                    Description = "Unable to generate suggestion at this time."
+                };
             }
         }
     }
