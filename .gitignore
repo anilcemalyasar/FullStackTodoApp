@@ -231,5 +231,3 @@ temp/
 # Ignore the .NET Core Web API project directory
 TodoAppWebAPI/
 
-# Ignore the solution file if you don't want to include it in source control
-TodoApp.sln
